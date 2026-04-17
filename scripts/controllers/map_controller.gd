@@ -3,6 +3,7 @@ extends Control
 const RATE_SUFFIX := "/分钟"
 const NORMAL_SLOT_MODULATE := Color(1, 1, 1, 1)
 const INACTIVE_SLOT_MODULATE := Color(0.62, 0.62, 0.62, 0.92)
+const DEFAULT_INVENTORY_RESOURCE_PATH := "res://resources/Item/库存.tres"
 const ITEM_TEXTURES := {
 	"高纯金属块": preload("res://resources/texture/高纯金属块.png"),
 	"高纯玄萤燃料块": preload("res://resources/texture/高纯玄萤燃料块.png"),
@@ -33,12 +34,15 @@ func _ready() -> void:
 	_cache_slot_views()
 	if inventory_data == null:
 		inventory_data = _find_inventory_data_from_scene()
+		if inventory_data == null:
+			inventory_data = _load_inventory_from_disk()
 	else:
 		_connect_inventory_signals()
 	_refresh_all_slots()
 
 
 func setup_inventory_data(next_inventory_data: InventoryDate) -> void:
+	next_inventory_data = _resolve_inventory_data(next_inventory_data)
 	inventory_data = next_inventory_data
 
 
@@ -205,8 +209,31 @@ func _set_label_text(target: Label, value: String) -> void:
 func _find_inventory_data_from_scene() -> InventoryDate:
 	var current_scene := get_tree().current_scene
 	if current_scene == null:
-		return null
+		return _load_inventory_from_disk()
+	if current_scene.has_method("_get_player_inventory_data"):
+		var provided_inventory := current_scene.call("_get_player_inventory_data") as InventoryDate
+		if provided_inventory != null:
+			return _resolve_inventory_data(provided_inventory)
 	var player_node := current_scene.find_child("Player", true, false)
 	if player_node == null:
+		return _load_inventory_from_disk()
+	return _resolve_inventory_data(player_node.get("inventory_data") as InventoryDate)
+
+
+func _resolve_inventory_data(source_inventory: InventoryDate) -> InventoryDate:
+	if source_inventory == null:
+		return _load_inventory_from_disk()
+	if source_inventory.resource_path.is_empty():
+		return source_inventory
+	var reloaded_inventory := _load_inventory_from_disk(source_inventory.resource_path)
+	if reloaded_inventory != null:
+		return reloaded_inventory
+	return source_inventory
+
+
+func _load_inventory_from_disk(resource_path: String = DEFAULT_INVENTORY_RESOURCE_PATH) -> InventoryDate:
+	if resource_path.is_empty():
 		return null
-	return player_node.get("inventory_data") as InventoryDate
+	if not ResourceLoader.exists(resource_path, "Resource"):
+		return null
+	return ResourceLoader.load(resource_path, "", ResourceLoader.CACHE_MODE_REPLACE) as InventoryDate

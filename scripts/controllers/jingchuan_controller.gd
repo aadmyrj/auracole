@@ -10,6 +10,7 @@ const MAP_SCENE := preload("res://scenes/map.tscn")
 const MAP_TOGGLE_ACTION := &"toggle_inventory"
 const MAP_UI_LAYER_NAME := &"MapUiLayer"
 const MAP_UI_ROOT_NAME := &"MapUiRoot"
+const DEFAULT_INVENTORY_RESOURCE_PATH := "res://resources/Item/库存.tres"
 # 按键防抖间隔（200毫秒内不能重复开关，防止连按乱套）
 const MAP_TOGGLE_DEBOUNCE_MSEC := 200
 
@@ -36,7 +37,6 @@ const MAP_TOGGLE_DEBOUNCE_MSEC := 200
 @onready var player: Node = $Player
 
 # UI父容器（CanvasGroup，用于放动态生成的地图/背包）
-@onready var map_parent: Node = $CanvasGroup
 @onready var world_environment: WorldEnvironment = $WorldEnvironment
 @onready var directional_light: DirectionalLight3D = $DirectionalLight3D
 
@@ -116,14 +116,16 @@ func _open_map() -> bool:
 		push_error("Failed to instantiate map scene: %s" % MAP_SCENE_PATH)
 		return false
 
+	var inventory_data := _resolve_map_inventory_data()
+	if new_map.has_method("setup_inventory_data"):
+		new_map.call("setup_inventory_data", inventory_data)
+	elif inventory_data != null:
+		new_map.set("inventory_data", inventory_data)
+
 	# 添加到UI容器
 	_configure_map_instance(new_map)
 	map_parent.add_child(new_map)
 	map_instance = new_map
-
-	var inventory_data := _get_player_inventory_data()
-	if new_map.has_method("setup_inventory_data"):
-		new_map.call_deferred("setup_inventory_data", inventory_data)
 
 	# 锁定玩家
 	_lock_player_for_map()
@@ -171,6 +173,18 @@ func _get_player_inventory_data() -> InventoryDate:
 	if player_node == null:
 		return null
 	return player_node.get("inventory_data") as InventoryDate
+
+
+func _resolve_map_inventory_data() -> InventoryDate:
+	var runtime_inventory := _get_player_inventory_data()
+	var inventory_path := DEFAULT_INVENTORY_RESOURCE_PATH
+	if runtime_inventory != null and not runtime_inventory.resource_path.is_empty():
+		inventory_path = runtime_inventory.resource_path
+	if ResourceLoader.exists(inventory_path, "Resource"):
+		var reloaded_inventory := ResourceLoader.load(inventory_path, "", ResourceLoader.CACHE_MODE_REPLACE) as InventoryDate
+		if reloaded_inventory != null:
+			return reloaded_inventory
+	return runtime_inventory
 
 
 func _ensure_map_parent() -> Control:
