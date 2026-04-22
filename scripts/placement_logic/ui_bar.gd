@@ -32,14 +32,14 @@ func setup(item_db: Dictionary, inventory: Dictionary, ordered_ids: Array[String
 	_rebuild_buttons(_ordered_ids)
 
 
-func apply_bottom_bar_layout(bar_height: float) -> void:
+func apply_bottom_bar_layout(bar_height: float, right_reserved_width: float = 0.0) -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	offset_left = 0.0
 	offset_top = -bar_height
-	offset_right = 0.0
+	offset_right = -right_reserved_width
 	offset_bottom = 0.0
 	custom_minimum_size = Vector2(0.0, bar_height)
-	size = Vector2(get_viewport_rect().size.x, bar_height)
+	size = Vector2(maxf(0.0, get_viewport_rect().size.x - right_reserved_width), bar_height)
 
 
 func update_inventory(inventory: Dictionary) -> void:

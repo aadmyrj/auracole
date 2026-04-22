@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://fqs12skd8pmx" path="res://scripts/placement_logic/map_manager.gd" id="2_njhnf"]
 [ext_resource type="Script" uid="uid://d3kexldrys24n" path="res://scripts/placement_logic/ui_bar.gd" id="3_7ukgd"]
 [ext_resource type="Script" uid="uid://doxi3006x3kao" path="res://scripts/placement_logic/camera_rig.gd" id="4_31ecb"]
+[ext_resource type="Script" uid="uid://d1k12iy7xsgsp" path="res://scripts/placement_logic/blueprint_sidebar.gd" id="5_xk8eg"]
 
 [node name="GameManager" type="Node2D" unique_id=880079559]
 script = ExtResource("1_u0f1a")
@@ -49,3 +50,39 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 
 [node name="InteractionMenu" type="PopupMenu" parent="CanvasLayer" unique_id=1426295989]
+
+[node name="BlueprintSidebar" type="VBoxContainer" parent="CanvasLayer" unique_id=469450009]
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 0
+grow_vertical = 2
+script = ExtResource("5_xk8eg")
+
+[node name="SaveBlueprintButton" type="Button" parent="CanvasLayer/BlueprintSidebar" unique_id=1036225754]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BlueprintScroll" type="ScrollContainer" parent="CanvasLayer/BlueprintSidebar" unique_id=525873531]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="BlueprintList" type="VBoxContainer" parent="CanvasLayer/BlueprintSidebar/BlueprintScroll" unique_id=490556385]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BlueprintNameDialog" type="AcceptDialog" parent="CanvasLayer/BlueprintSidebar" unique_id=1676007902]
+
+[node name="BlueprintNameInput" type="LineEdit" parent="CanvasLayer/BlueprintSidebar/BlueprintNameDialog" unique_id=1144490018]
+
+[node name="BlueprintContextMenu" type="PopupMenu" parent="CanvasLayer/BlueprintSidebar" unique_id=1613315588]
+
+[node name="TopActions" type="HBoxContainer" parent="CanvasLayer" unique_id=1686645113]
+
+[node name="UndoButton" type="Button" parent="CanvasLayer/TopActions" unique_id=1320130082]
+layout_mode = 2
+
+[node name="ClearButton" type="Button" parent="CanvasLayer/TopActions" unique_id=1767195467]
+layout_mode = 2
