@@ -4,6 +4,7 @@ class_name GameManager
 const BUILDING_SCENE: PackedScene = preload("res://scenes/placement_logic/building.tscn")
 const DIRECTED_CONVEYOR_PLANNER_V2_SCRIPT: GDScript = preload("res://scripts/placement_logic/directed_conveyor_planner_v2.gd")
 const CONVEYOR_DELETION_MENU_V2_SCRIPT: GDScript = preload("res://scripts/placement_logic/conveyor_deletion_menu_v2.gd")
+const BLUEPRINT_SAVE_PATH: String = "user://blueprints.save"
 
 const BAR_HEIGHT: float = 150.0
 const MIN_BAR_HEIGHT: float = 110.0
@@ -15,16 +16,27 @@ enum BuildingAction {
 	ROTATE
 }
 
+enum OperationType {
+	PLACE_BUILDING,
+	ADD_CONVEYOR
+}
+
 @onready var map_manager: MapManager = $MapManager
 @onready var camera_rig: CameraRig = $CameraRig
 @onready var canvas_layer: CanvasLayer = $CanvasLayer
 @onready var ui_bar: UI_Bar = $CanvasLayer/UI_Bar
+@onready var top_actions: HBoxContainer = $CanvasLayer/TopActions
+@onready var undo_button: Button = $CanvasLayer/TopActions/UndoButton
+@onready var clear_button: Button = $CanvasLayer/TopActions/ClearButton
+@onready var blueprint_sidebar: BlueprintSidebar = $CanvasLayer/BlueprintSidebar
 @onready var interaction_menu: PopupMenu = $CanvasLayer/InteractionMenu
 
 var item_database: Dictionary = {}
 var inventory: Dictionary = {}
 var selected_item_id: String = ""
 var is_conveyor_mode: bool = false
+var _blueprints: Array[Dictionary] = []
+var _operation_history: Array[Dictionary] = []
 
 var _last_mouse_position: Vector2 = Vector2.ZERO
 var _pressed_building: Building = null
@@ -45,12 +57,22 @@ func _ready() -> void:
 	item_database = ItemDatabase.create()
 	_init_inventory()
 	_setup_conveyor_tools()
+	_setup_top_action_buttons()
 	ui_bar.setup(item_database, inventory, ItemDatabase.ITEM_ORDER)
 	ui_bar.item_selected.connect(_on_item_selected)
+	undo_button.pressed.connect(_on_undo_pressed)
+	clear_button.pressed.connect(_on_clear_pressed)
+	blueprint_sidebar.save_requested.connect(_on_blueprint_save_requested)
+	blueprint_sidebar.load_requested.connect(_on_blueprint_load_requested)
+	blueprint_sidebar.delete_requested.connect(_on_blueprint_delete_requested)
+	blueprint_sidebar.rename_requested.connect(_on_blueprint_rename_requested)
 	interaction_menu.id_pressed.connect(_on_interaction_menu_id_pressed)
 	interaction_menu.hide()
+	_load_blueprints()
+	_refresh_blueprint_list()
 	call_deferred("_layout_ui_bar")
 	_sync_camera_drag_enabled()
+	_update_top_action_buttons()
 	get_viewport().size_changed.connect(_on_viewport_size_changed)
 
 
@@ -189,7 +211,9 @@ func _handle_right_pressed(mouse_pos: Vector2, screen_pos: Vector2) -> void:
 func _layout_ui_bar() -> void:
 	var viewport_size: Vector2 = get_viewport_rect().size
 	var bar_height := clampf(viewport_size.y * 0.22, MIN_BAR_HEIGHT, BAR_HEIGHT)
-	ui_bar.apply_bottom_bar_layout(bar_height)
+	_apply_top_actions_layout()
+	blueprint_sidebar.apply_sidebar_layout(viewport_size, bar_height)
+	ui_bar.apply_bottom_bar_layout(bar_height, blueprint_sidebar.get_layout_reserved_width())
 
 
 func _init_inventory() -> void:
@@ -206,12 +230,64 @@ func _setup_conveyor_tools() -> void:
 	_directed_conveyor_planner.name = "DirectedConveyorPlannerV2"
 	_directed_conveyor_planner.setup(map_manager)
 	_directed_conveyor_planner.conveyor_mode_changed.connect(_on_conveyor_mode_changed)
+	_directed_conveyor_planner.conveyor_generated.connect(_on_conveyor_generated)
 	add_child(_directed_conveyor_planner)
 
 	_conveyor_deletion_menu = CONVEYOR_DELETION_MENU_V2_SCRIPT.new() as ConveyorDeletionMenuV2
 	_conveyor_deletion_menu.name = "ConveyorDeletionMenuV2"
 	_conveyor_deletion_menu.delete_conveyor.connect(_on_delete_conveyor_requested)
 	canvas_layer.add_child(_conveyor_deletion_menu)
+
+
+func _setup_top_action_buttons() -> void:
+	top_actions.mouse_filter = Control.MOUSE_FILTER_STOP
+	top_actions.add_theme_constant_override("separation", 8)
+
+	_style_action_button(undo_button, "撤销", Color(0.16, 0.32, 0.58, 0.94), Color(0.55, 0.77, 1.0, 1.0))
+	_style_action_button(clear_button, "清空", Color(0.55, 0.16, 0.16, 0.94), Color(1.0, 0.64, 0.64, 1.0))
+
+
+func _style_action_button(button: Button, text: String, bg_color: Color, border_color: Color) -> void:
+	button.text = text
+	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.custom_minimum_size = Vector2(88.0, 42.0)
+
+	var normal_style := StyleBoxFlat.new()
+	normal_style.bg_color = bg_color
+	normal_style.border_width_left = 2
+	normal_style.border_width_top = 2
+	normal_style.border_width_right = 2
+	normal_style.border_width_bottom = 2
+	normal_style.border_color = border_color
+	normal_style.corner_radius_top_left = 10
+	normal_style.corner_radius_top_right = 10
+	normal_style.corner_radius_bottom_left = 10
+	normal_style.corner_radius_bottom_right = 10
+	normal_style.content_margin_left = 12
+	normal_style.content_margin_right = 12
+	normal_style.content_margin_top = 10
+	normal_style.content_margin_bottom = 10
+
+	var hover_style: StyleBoxFlat = normal_style.duplicate()
+	hover_style.bg_color = bg_color.lightened(0.12)
+
+	var disabled_style: StyleBoxFlat = normal_style.duplicate()
+	disabled_style.bg_color = bg_color.darkened(0.35)
+	disabled_style.border_color = border_color.darkened(0.35)
+
+	button.add_theme_stylebox_override("normal", normal_style)
+	button.add_theme_stylebox_override("hover", hover_style)
+	button.add_theme_stylebox_override("pressed", disabled_style)
+	button.add_theme_stylebox_override("disabled", disabled_style)
+	button.add_theme_color_override("font_color", Color.WHITE)
+	button.add_theme_color_override("font_disabled_color", Color(1.0, 1.0, 1.0, 0.65))
+
+
+func _apply_top_actions_layout() -> void:
+	top_actions.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	top_actions.position = Vector2(16.0, 16.0)
+	top_actions.size = top_actions.get_combined_minimum_size()
 
 
 func _on_item_selected(item_id: String) -> void:
@@ -289,7 +365,11 @@ func _on_delete_conveyor_requested(conveyor_id: int) -> void:
 	if conveyor_id == -1:
 		return
 
-	map_manager.remove_conveyor(conveyor_id)
+	if not map_manager.remove_conveyor(conveyor_id):
+		return
+
+	_remove_conveyor_operations(conveyor_id)
+	_update_top_action_buttons()
 	_update_active_preview(_last_mouse_position)
 
 
@@ -331,14 +411,16 @@ func _try_place(mouse_pos: Vector2) -> void:
 		_update_preview(mouse_pos)
 		return
 
-	var building: Building = BUILDING_SCENE.instantiate() as Building
-	map_manager.add_child(building)
-	building.setup(selected_item_id, item_data["icon"], MapManager.CELL_SIZE, footprint)
-	building.set_top_left_cell(top_left_cell)
-	building.position = map_manager.cell_to_world_center(top_left_cell, footprint)
+	var building := _spawn_building(selected_item_id, top_left_cell)
+	if building == null:
+		_update_preview(mouse_pos)
+		return
 
-	map_manager.occupy(top_left_cell, footprint, building)
 	inventory[selected_item_id] = int(inventory[selected_item_id]) - 1
+	_push_operation({
+		"type": OperationType.PLACE_BUILDING,
+		"building": building
+	})
 	ui_bar.update_inventory(inventory)
 	_update_preview(mouse_pos)
 
@@ -371,7 +453,7 @@ func _on_interaction_menu_id_pressed(action_id: int) -> void:
 			_rotate_building(target_building)
 
 
-func _delete_building(building: Building) -> void:
+func _delete_building(building: Building, prune_history: bool = true) -> void:
 	if not is_instance_valid(building):
 		return
 
@@ -380,10 +462,14 @@ func _delete_building(building: Building) -> void:
 		map_manager.clear_preview()
 		_sync_camera_drag_enabled()
 
+	if prune_history:
+		_remove_building_operations(building)
+
 	map_manager.free_area(building.top_left_cell, building.footprint)
 	inventory[building.item_id] = int(inventory.get(building.item_id, 0)) + 1
 	ui_bar.update_inventory(inventory)
 	building.queue_free()
+	_update_top_action_buttons()
 	_update_active_preview(_last_mouse_position)
 
 
@@ -496,9 +582,323 @@ func _on_viewport_size_changed() -> void:
 
 
 func _is_pointer_over_ui(screen_position: Vector2) -> bool:
-	if not is_instance_valid(ui_bar):
-		return false
-	if not ui_bar.visible:
-		return false
+	if is_instance_valid(ui_bar) and ui_bar.visible and ui_bar.get_global_rect().has_point(screen_position):
+		return true
+	if is_instance_valid(top_actions) and top_actions.visible and top_actions.get_global_rect().has_point(screen_position):
+		return true
+	if is_instance_valid(blueprint_sidebar) and blueprint_sidebar.visible and blueprint_sidebar.get_global_rect().has_point(screen_position):
+		return true
+	return false
 
-	return ui_bar.get_global_rect().has_point(screen_position)
+
+func _spawn_building(item_id: String, top_left_cell: Vector2i, rotation_steps: int = 0) -> Building:
+	if not item_database.has(item_id):
+		return null
+
+	var item_data: Dictionary = item_database[item_id]
+	var building: Building = BUILDING_SCENE.instantiate() as Building
+	map_manager.add_child(building)
+	building.setup(item_id, item_data["icon"], MapManager.CELL_SIZE, item_data["size"])
+
+	var normalized_rotation := posmod(rotation_steps, 4)
+	for _i in normalized_rotation:
+		building.rotate_clockwise()
+
+	if not map_manager.can_place(top_left_cell, building.footprint):
+		building.queue_free()
+		return null
+
+	building.set_top_left_cell(top_left_cell)
+	building.position = map_manager.cell_to_world_center(top_left_cell, building.footprint)
+	map_manager.occupy(top_left_cell, building.footprint, building)
+	return building
+
+
+func _on_blueprint_save_requested(blueprint_name: String) -> void:
+	var normalized_name: String = blueprint_name.strip_edges()
+	if normalized_name.is_empty():
+		return
+
+	if _find_blueprint_index(normalized_name) != -1:
+		blueprint_sidebar.show_duplicate_name_warning("蓝图名称已存在，请重新命名")
+		return
+
+	var blueprint_data := {
+		"name": normalized_name,
+		"items": _collect_blueprint_items(),
+		"conveyors": map_manager.get_serialized_conveyors()
+	}
+	_blueprints.append(blueprint_data)
+	_save_blueprints()
+	_refresh_blueprint_list()
+	blueprint_sidebar.confirm_save_success()
+
+
+func _on_blueprint_rename_requested(old_name: String, new_name: String) -> void:
+	var old_blueprint_name: String = old_name.strip_edges()
+	var new_blueprint_name: String = new_name.strip_edges()
+	if old_blueprint_name.is_empty() or new_blueprint_name.is_empty():
+		return
+
+	if new_blueprint_name == old_blueprint_name:
+		blueprint_sidebar.confirm_save_success()
+		return
+
+	var old_blueprint_index: int = _find_blueprint_index(old_blueprint_name)
+	if old_blueprint_index == -1:
+		return
+
+	if _find_blueprint_index(new_blueprint_name) != -1:
+		blueprint_sidebar.show_duplicate_name_warning("不可以重命名，请重新命名")
+		return
+
+	var renamed_blueprint: Dictionary = (_blueprints[old_blueprint_index] as Dictionary).duplicate(true)
+	renamed_blueprint["name"] = new_blueprint_name
+	_blueprints[old_blueprint_index] = renamed_blueprint
+	_save_blueprints()
+	_refresh_blueprint_list()
+	blueprint_sidebar.confirm_save_success()
+
+
+func _on_blueprint_load_requested(blueprint_name: String) -> void:
+	var blueprint_index := _find_blueprint_index(blueprint_name)
+	if blueprint_index == -1:
+		return
+
+	_prepare_blueprint_edit_mode()
+	_clear_current_map(true)
+
+	var blueprint: Dictionary = _blueprints[blueprint_index]
+	var blueprint_items: Array = blueprint.get("items", [])
+	for item_variant in blueprint_items:
+		var item_data := item_variant as Dictionary
+		if item_data.is_empty():
+			continue
+		_restore_blueprint_item(item_data)
+
+	map_manager.restore_serialized_conveyors(blueprint.get("conveyors", []))
+	ui_bar.update_inventory(inventory)
+	_update_active_preview(_last_mouse_position)
+
+
+func _on_blueprint_delete_requested(blueprint_name: String) -> void:
+	var blueprint_index := _find_blueprint_index(blueprint_name)
+	if blueprint_index == -1:
+		return
+
+	_blueprints.remove_at(blueprint_index)
+	_save_blueprints()
+	_refresh_blueprint_list()
+
+
+func _prepare_blueprint_edit_mode() -> void:
+	interaction_menu.hide()
+	if _conveyor_deletion_menu != null:
+		_conveyor_deletion_menu.hide()
+	_context_building = null
+	_clear_pressed_building_tracking()
+	if _moving_building != null:
+		_cancel_move_mode()
+	if is_conveyor_mode:
+		_exit_conveyor_mode()
+	_cancel_selection()
+
+
+func _clear_current_map(reset_history: bool = false) -> void:
+	for building in map_manager.get_buildings():
+		if not is_instance_valid(building):
+			continue
+		map_manager.free_area(building.top_left_cell, building.footprint)
+		inventory[building.item_id] = int(inventory.get(building.item_id, 0)) + 1
+		building.queue_free()
+
+	map_manager.clear_conveyors()
+	map_manager.clear_preview()
+	if reset_history:
+		_clear_operation_history()
+	ui_bar.update_inventory(inventory)
+	_update_top_action_buttons()
+
+
+func _collect_blueprint_items() -> Array[Dictionary]:
+	var items: Array[Dictionary] = []
+	for building in map_manager.get_buildings():
+		if not is_instance_valid(building):
+			continue
+		items.append({
+			"item_id": building.item_id,
+			"cell": {
+				"x": building.top_left_cell.x,
+				"y": building.top_left_cell.y
+			},
+			"rotation_steps": building.rotation_steps
+		})
+	return items
+
+
+func _restore_blueprint_item(item_data: Dictionary) -> void:
+	var item_id := str(item_data.get("item_id", ""))
+	if item_id.is_empty():
+		return
+	if not item_database.has(item_id):
+		push_warning("Skipping blueprint item with unknown item_id: %s" % item_id)
+		return
+
+	var building := _spawn_building(item_id, _parse_blueprint_cell(item_data.get("cell", {})), int(item_data.get("rotation_steps", 0)))
+	if building == null:
+		push_warning("Skipping blueprint item that can not be placed: %s" % item_id)
+		return
+
+	inventory[item_id] = int(inventory.get(item_id, 0)) - 1
+
+
+func _parse_blueprint_cell(cell_data: Variant) -> Vector2i:
+	if cell_data is Dictionary:
+		var cell_dict := cell_data as Dictionary
+		return Vector2i(int(cell_dict.get("x", 0)), int(cell_dict.get("y", 0)))
+	if cell_data is Array:
+		var cell_array := cell_data as Array
+		if cell_array.size() >= 2:
+			return Vector2i(int(cell_array[0]), int(cell_array[1]))
+	return Vector2i.ZERO
+
+
+func _refresh_blueprint_list() -> void:
+	var blueprint_names: Array[String] = []
+	for blueprint in _blueprints:
+		blueprint_names.append(str(blueprint.get("name", "")))
+	blueprint_sidebar.refresh_blueprints(blueprint_names)
+
+
+func _find_blueprint_index(blueprint_name: String) -> int:
+	for index in _blueprints.size():
+		var blueprint: Dictionary = _blueprints[index]
+		if str(blueprint.get("name", "")) == blueprint_name:
+			return index
+	return -1
+
+
+func _load_blueprints() -> void:
+	if not FileAccess.file_exists(BLUEPRINT_SAVE_PATH):
+		_blueprints.clear()
+		_save_blueprints()
+		return
+
+	var file := FileAccess.open(BLUEPRINT_SAVE_PATH, FileAccess.READ)
+	if file == null:
+		push_warning("Failed to open blueprint save file for reading.")
+		_blueprints.clear()
+		return
+
+	var raw_text := file.get_as_text().strip_edges()
+	file.close()
+	if raw_text.is_empty():
+		_blueprints.clear()
+		_save_blueprints()
+		return
+
+	var parsed: Variant = JSON.parse_string(raw_text)
+	if not (parsed is Dictionary):
+		push_warning("Blueprint save file is invalid. Resetting blueprint data.")
+		_blueprints.clear()
+		_save_blueprints()
+		return
+
+	_blueprints.clear()
+	var parsed_blueprints: Array = (parsed as Dictionary).get("blueprints", [])
+	for blueprint_variant in parsed_blueprints:
+		var blueprint := blueprint_variant as Dictionary
+		if blueprint.is_empty():
+			continue
+		if not blueprint.has("name"):
+			continue
+		blueprint["items"] = blueprint.get("items", [])
+		blueprint["conveyors"] = blueprint.get("conveyors", [])
+		_blueprints.append(blueprint)
+
+
+func _save_blueprints() -> void:
+	var file := FileAccess.open(BLUEPRINT_SAVE_PATH, FileAccess.WRITE)
+	if file == null:
+		push_warning("Failed to open blueprint save file for writing.")
+		return
+
+	file.store_string(JSON.stringify({
+		"blueprints": _blueprints
+	}, "\t"))
+	file.close()
+
+
+func _on_conveyor_generated(conveyor_id: int) -> void:
+	if conveyor_id == -1:
+		return
+
+	_push_operation({
+		"type": OperationType.ADD_CONVEYOR,
+		"conveyor_id": conveyor_id
+	})
+
+
+func _on_undo_pressed() -> void:
+	if _operation_history.is_empty():
+		return
+
+	interaction_menu.hide()
+	if _conveyor_deletion_menu != null:
+		_conveyor_deletion_menu.hide()
+	_clear_pressed_building_tracking()
+	if _moving_building != null:
+		_cancel_move_mode()
+	if is_conveyor_mode:
+		_exit_conveyor_mode()
+
+	var operation: Dictionary = _operation_history.pop_back()
+	match int(operation.get("type", -1)):
+		OperationType.PLACE_BUILDING:
+			var building: Building = operation.get("building") as Building
+			if is_instance_valid(building):
+				_delete_building(building, false)
+		OperationType.ADD_CONVEYOR:
+			var conveyor_id: int = int(operation.get("conveyor_id", -1))
+			if conveyor_id != -1:
+				map_manager.remove_conveyor(conveyor_id)
+				_update_active_preview(_last_mouse_position)
+
+	_update_top_action_buttons()
+
+
+func _on_clear_pressed() -> void:
+	_prepare_blueprint_edit_mode()
+	_clear_current_map(true)
+
+
+func _push_operation(operation: Dictionary) -> void:
+	_operation_history.append(operation)
+	_update_top_action_buttons()
+
+
+func _clear_operation_history() -> void:
+	_operation_history.clear()
+
+
+func _remove_building_operations(building: Building) -> void:
+	for index in range(_operation_history.size() - 1, -1, -1):
+		var operation: Dictionary = _operation_history[index]
+		if int(operation.get("type", -1)) != OperationType.PLACE_BUILDING:
+			continue
+		if operation.get("building") == building:
+			_operation_history.remove_at(index)
+
+
+func _remove_conveyor_operations(conveyor_id: int) -> void:
+	for index in range(_operation_history.size() - 1, -1, -1):
+		var operation: Dictionary = _operation_history[index]
+		if int(operation.get("type", -1)) != OperationType.ADD_CONVEYOR:
+			continue
+		if int(operation.get("conveyor_id", -1)) == conveyor_id:
+			_operation_history.remove_at(index)
+
+
+func _update_top_action_buttons() -> void:
+	undo_button.disabled = _operation_history.is_empty()
+	clear_button.disabled = map_manager.get_buildings().is_empty() and map_manager.directed_conveyors.is_empty()

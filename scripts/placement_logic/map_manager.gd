@@ -131,6 +131,75 @@ func get_building_cells() -> Array[Vector2i]:
 	return cells
 
 
+func get_buildings() -> Array[Building]:
+	var buildings: Array[Building] = []
+	var seen: Dictionary = {}
+	for building_variant in _occupied.values():
+		var building := building_variant as Building
+		if building == null or not is_instance_valid(building):
+			continue
+		if seen.has(building):
+			continue
+		seen[building] = true
+		buildings.append(building)
+	return buildings
+
+
+func get_serialized_conveyors() -> Array:
+	var serialized_conveyors: Array = []
+	var conveyor_ids: Array = directed_conveyors.keys()
+	conveyor_ids.sort()
+
+	for conveyor_id_variant in conveyor_ids:
+		var conveyor_id := int(conveyor_id_variant)
+		var path_cells: Array = directed_conveyors.get(conveyor_id, [])
+		var serialized_path: Array = []
+		for cell_data_variant in path_cells:
+			var cell_data: Dictionary = cell_data_variant
+			if not cell_data.has("position") or not cell_data.has("arrow_direction"):
+				continue
+
+			var cell: Vector2i = cell_data["position"]
+			serialized_path.append({
+				"position": {
+					"x": cell.x,
+					"y": cell.y
+				},
+				"arrow_direction": int(cell_data["arrow_direction"])
+			})
+
+		if not serialized_path.is_empty():
+			serialized_conveyors.append(serialized_path)
+
+	return serialized_conveyors
+
+
+func restore_serialized_conveyors(serialized_conveyors: Array) -> void:
+	for conveyor_variant in serialized_conveyors:
+		var serialized_path: Array = conveyor_variant as Array
+		if serialized_path.is_empty():
+			continue
+
+		var directed_cells: Array = []
+		for cell_data_variant in serialized_path:
+			var cell_data: Dictionary = cell_data_variant as Dictionary
+			if cell_data.is_empty():
+				continue
+			if not cell_data.has("position") or not cell_data.has("arrow_direction"):
+				continue
+
+			var position_data: Dictionary = cell_data["position"]
+			directed_cells.append({
+				"position": Vector2i(int(position_data.get("x", 0)), int(position_data.get("y", 0))),
+				"arrow_direction": int(cell_data["arrow_direction"])
+			})
+
+		if directed_cells.is_empty():
+			continue
+
+		add_directed_conveyor(directed_cells)
+
+
 func is_cell_occupied_by_building(cell: Vector2i) -> bool:
 	return has_building_at_cell(cell)
 
@@ -330,6 +399,14 @@ func remove_conveyor(conveyor_id: int) -> bool:
 	_rebuild_conveyor_cells()
 	queue_redraw()
 	return true
+
+
+func clear_conveyors() -> void:
+	directed_conveyors.clear()
+	conveyor_cells.clear()
+	_next_conveyor_id = 1
+	clear_directed_conveyor_preview()
+	queue_redraw()
 
 
 func _draw() -> void:
