@@ -7,6 +7,8 @@ const CHARACTER_TOON_SHADER := preload("res://shaders/anime_character.gdshader")
 # 地图/背包场景文件路径（你自己的tscn文件）
 const MAP_SCENE_PATH := "res://scenes/map.tscn"
 const MAP_SCENE := preload("res://scenes/map.tscn")
+const RECIPE_BROWSER_SCENE_PATH := "res://scenes/recipe_browser/recipe_browser.tscn"
+const RECIPE_BROWSER_SCENE := preload("res://scenes/recipe_browser/recipe_browser.tscn")
 const MAP_TOGGLE_ACTION := &"toggle_inventory"
 const MAP_UI_LAYER_NAME := &"MapUiLayer"
 const MAP_UI_ROOT_NAME := &"MapUiRoot"
@@ -44,6 +46,7 @@ const MAP_TOGGLE_DEBOUNCE_MSEC := 200
 # ====================== 状态变量 ======================
 # 保存当前生成的地图/背包实例
 var map_instance: Control
+var recipe_browser_instance: RecipeBrowser
 var map_parent: Control
 # 上一次开关的时间（用于防抖）
 var last_map_toggle_time_msec := -MAP_TOGGLE_DEBOUNCE_MSEC
@@ -63,10 +66,15 @@ func _ready() -> void:
 # ====================== 输入检测 ======================
 func _input(event: InputEvent) -> void:
 	# 同步状态，防止异常
-	_sync_map_state()
+	_sync_overlay_state()
 
 	var key_event := event as InputEventKey
 	if key_event != null and key_event.echo:
+		return
+
+	if key_event != null and key_event.pressed and key_event.keycode == KEY_R:
+		if _toggle_recipe_browser():
+			get_viewport().set_input_as_handled()
 		return
 
 	# 按 B 键：开关地图/背包
@@ -75,13 +83,14 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		return
 
-	# 按 ESC：如果地图打开就关闭
-	if event.is_action_pressed("ui_cancel", true) and _try_close_map():
+	# 按 ESC：如果有覆盖UI打开就关闭
+	if event.is_action_pressed("ui_cancel", true) and (_try_close_recipe_browser() or _try_close_map()):
 		get_viewport().set_input_as_handled()
 
 # 节点销毁时自动关闭地图，防止内存泄漏
 func _exit_tree() -> void:
 	_close_map()
+	_close_recipe_browser()
 
 # ====================== 核心开关逻辑 ======================
 # 切换地图：打开 ↔ 关闭
@@ -92,14 +101,32 @@ func _toggle_map() -> bool:
 		return false
 	return _open_map()
 
+
+func _toggle_recipe_browser() -> bool:
+	if _get_recipe_browser_instance() != null:
+		return _try_close_recipe_browser()
+	if not _can_toggle_map():
+		return false
+	return _open_recipe_browser()
+
 # 尝试关闭地图
 func _try_close_map() -> bool:
 	if _get_map_instance() == null:
-		_sync_map_state()
+		_sync_overlay_state()
 		return false
 	if not _can_toggle_map():
 		return false
 	_close_map()
+	return true
+
+
+func _try_close_recipe_browser() -> bool:
+	if _get_recipe_browser_instance() == null:
+		_sync_overlay_state()
+		return false
+	if not _can_toggle_map():
+		return false
+	_close_recipe_browser()
 	return true
 
 # 打开地图：动态加载 → 实例化 → 添加到场景
@@ -109,6 +136,8 @@ func _open_map() -> bool:
 	if _ensure_map_parent() == null:
 		push_error("Map parent node is missing.")
 		return false
+	if _get_recipe_browser_instance() != null:
+		_close_recipe_browser()
 
 	# 创建实例
 	var new_map := MAP_SCENE.instantiate() as Control
@@ -137,7 +166,41 @@ func _close_map() -> void:
 	if current_map != null:
 		current_map.queue_free()
 	map_instance = null
-	_unlock_player_from_map()
+	if _get_recipe_browser_instance() == null:
+		_unlock_player_from_map()
+
+
+func _open_recipe_browser() -> bool:
+	if _get_recipe_browser_instance() != null:
+		return false
+	if _ensure_map_parent() == null:
+		push_error("Recipe browser parent node is missing.")
+		return false
+	if _get_map_instance() != null:
+		_close_map()
+
+	var recipe_browser := RECIPE_BROWSER_SCENE.instantiate() as RecipeBrowser
+	if recipe_browser == null:
+		push_error("Failed to instantiate recipe browser scene: %s" % RECIPE_BROWSER_SCENE_PATH)
+		return false
+
+	recipe_browser.name = "RecipeBrowserView"
+	recipe_browser.close_requested.connect(_on_recipe_browser_close_requested)
+	recipe_browser.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	recipe_browser.mouse_filter = Control.MOUSE_FILTER_STOP
+	map_parent.add_child(recipe_browser)
+	recipe_browser_instance = recipe_browser
+	_lock_player_for_map()
+	return true
+
+
+func _close_recipe_browser() -> void:
+	var current_browser := _get_recipe_browser_instance()
+	if current_browser != null:
+		current_browser.queue_free()
+	recipe_browser_instance = null
+	if _get_map_instance() == null:
+		_unlock_player_from_map()
 
 # ====================== 辅助功能 ======================
 # 防抖判断：是否允许开关
@@ -155,10 +218,22 @@ func _get_map_instance() -> Control:
 	map_instance = null
 	return null
 
-# 状态同步：防止地图意外消失但玩家还在锁定
-func _sync_map_state() -> void:
-	if _get_map_instance() == null and player_locked_by_map:
+
+func _get_recipe_browser_instance() -> RecipeBrowser:
+	if is_instance_valid(recipe_browser_instance) and recipe_browser_instance.is_inside_tree():
+		return recipe_browser_instance
+	recipe_browser_instance = null
+	return null
+
+
+# 状态同步：防止覆盖UI意外消失但玩家还在锁定
+func _sync_overlay_state() -> void:
+	if _get_map_instance() == null and _get_recipe_browser_instance() == null and player_locked_by_map:
 		_unlock_player_from_map()
+
+
+func _on_recipe_browser_close_requested() -> void:
+	_close_recipe_browser()
 
 
 func _get_player_inventory_data() -> InventoryDate:

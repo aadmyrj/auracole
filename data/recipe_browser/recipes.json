@@ -1,0 +1,106 @@
+{
+  "categories": [
+    {
+      "id": "mining",
+      "name": "矿石开采类"
+    },
+    {
+      "id": "energy",
+      "name": "能源类"
+    },
+    {
+      "id": "chemical",
+      "name": "化学类"
+    }
+  ],
+  "recipes": [
+    {
+      "id": "ore_miner_water",
+      "name": "矿石开采机",
+      "category": "mining",
+      "input": "机械力/电力，水",
+      "output": "玄荧矿浊液",
+      "notes": ""
+    },
+    {
+      "id": "ore_miner_acid",
+      "name": "矿石开采机",
+      "category": "mining",
+      "input": "机械力/电力，酸液",
+      "output": "玄荧矿液+矿石粉",
+      "notes": ""
+    },
+    {
+      "id": "water_wheel",
+      "name": "龙骨水车",
+      "category": "mining",
+      "input": "压力水源",
+      "output": "机械力+水",
+      "notes": ""
+    },
+    {
+      "id": "dam_power",
+      "name": "水坝接口",
+      "category": "mining",
+      "input": "修复水坝后可放置",
+      "output": "电力+水",
+      "notes": ""
+    },
+    {
+      "id": "dam_water_source",
+      "name": "水坝接口",
+      "category": "mining",
+      "input": "",
+      "output": "压力水源",
+      "notes": ""
+    },
+    {
+      "id": "reactor_ore_powder",
+      "name": "反应堆",
+      "category": "energy",
+      "input": "玄荧矿粉",
+      "output": "金属粉末+少量电力",
+      "notes": ""
+    },
+    {
+      "id": "reactor_refined_powder",
+      "name": "反应堆",
+      "category": "energy",
+      "input": "精炼玄荧矿粉",
+      "output": "金属块+电力",
+      "notes": ""
+    },
+    {
+      "id": "reactor_fuel_block",
+      "name": "反应堆",
+      "category": "energy",
+      "input": "玄荧燃料块",
+      "output": "高纯金属块+电力",
+      "notes": ""
+    },
+    {
+      "id": "reactor_rare_metal",
+      "name": "反应堆",
+      "category": "energy",
+      "input": "高纯玄荧燃料块+高纯金属块+电力",
+      "output": "稀有金属块",
+      "notes": ""
+    },
+    {
+      "id": "sedimentation_tank",
+      "name": "沉淀池",
+      "category": "chemical",
+      "input": "浊液类",
+      "output": "粉末+液体",
+      "notes": ""
+    },
+    {
+      "id": "reaction_tank",
+      "name": "反应池",
+      "category": "chemical",
+      "input": "固体/液体",
+      "output": "液体",
+      "notes": ""
+    }
+  ]
+}

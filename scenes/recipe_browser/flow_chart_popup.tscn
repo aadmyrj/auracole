@@ -1,0 +1,101 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/recipe_browser/flow_chart_popup.gd" id="1_popup"]
+[ext_resource type="Script" path="res://scripts/recipe_browser/flow_chart_connection_layer.gd" id="2_line"]
+
+[node name="FlowChartPopup" type="PopupPanel"]
+visible = false
+initial_position = 1
+script = ExtResource("1_popup")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 22
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(1036, 676)
+theme_override_constants/separation = 18
+
+[node name="Header" type="BoxContainer" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TitleBlock" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="DeviceName" type="Label" parent="MarginContainer/VBoxContainer/Header/TitleBlock"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.972549, 0.980392, 1, 1)
+theme_override_font_sizes/font_size = 28
+text = "设备名称"
+
+[node name="RecipeInfo" type="Label" parent="MarginContainer/VBoxContainer/Header/TitleBlock"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.678431, 0.772549, 0.913725, 1)
+theme_override_font_sizes/font_size = 15
+text = "输入输出信息"
+
+[node name="CloseButton" type="Button" parent="MarginContainer/VBoxContainer/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(112, 46)
+layout_mode = 2
+text = "关闭"
+
+[node name="FlowPanel" type="PanelContainer" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer/FlowPanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 1
+vertical_scroll_mode = 1
+
+[node name="FlowSurface" type="Control" parent="MarginContainer/VBoxContainer/FlowPanel/ScrollContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(1240, 720)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ConnectionLayer" type="Control" parent="MarginContainer/VBoxContainer/FlowPanel/ScrollContainer/FlowSurface"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_line")
+
+[node name="NodesLayer" type="Control" parent="MarginContainer/VBoxContainer/FlowPanel/ScrollContainer/FlowSurface"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="FooterHint" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.541176, 0.627451, 0.764706, 1)
+theme_override_font_sizes/font_size = 13
+text = "点击配方卡片可再次切换流程图，弹窗支持滚动查看完整流程。"

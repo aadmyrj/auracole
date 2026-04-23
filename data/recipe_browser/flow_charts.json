@@ -1,0 +1,243 @@
+{
+  "ore_miner_water": {
+    "steps": [
+      {
+        "id": "input_power",
+        "name": "机械力/电力",
+        "kind": "input",
+        "duration": 2.0,
+        "pos": [90, 180]
+      },
+      {
+        "id": "input_water",
+        "name": "水",
+        "kind": "input",
+        "duration": 2.0,
+        "pos": [90, 320]
+      },
+      {
+        "id": "device",
+        "name": "矿石开采机",
+        "kind": "device",
+        "duration": 2.0,
+        "pos": [380, 250]
+      },
+      {
+        "id": "output",
+        "name": "玄荧矿浊液",
+        "kind": "output",
+        "duration": 2.0,
+        "pos": [760, 250]
+      }
+    ],
+    "connections": [
+      {
+        "from": "input_power",
+        "to": "device"
+      },
+      {
+        "from": "input_water",
+        "to": "device"
+      },
+      {
+        "from": "device",
+        "to": "output"
+      }
+    ]
+  },
+  "ore_miner_acid": {
+    "steps": [
+      {
+        "id": "input_power",
+        "name": "机械力/电力",
+        "kind": "input",
+        "duration": 2.0,
+        "pos": [90, 145]
+      },
+      {
+        "id": "input_acid",
+        "name": "酸液",
+        "kind": "input",
+        "duration": 2.0,
+        "pos": [90, 335]
+      },
+      {
+        "id": "device",
+        "name": "矿石开采机",
+        "kind": "device",
+        "duration": 2.0,
+        "pos": [380, 240]
+      },
+      {
+        "id": "output_liquid",
+        "name": "玄荧矿液",
+        "kind": "output",
+        "duration": 2.0,
+        "pos": [760, 145]
+      },
+      {
+        "id": "output_powder",
+        "name": "矿石粉",
+        "kind": "output",
+        "duration": 2.0,
+        "pos": [760, 335]
+      }
+    ],
+    "connections": [
+      {
+        "from": "input_power",
+        "to": "device"
+      },
+      {
+        "from": "input_acid",
+        "to": "device"
+      },
+      {
+        "from": "device",
+        "to": "output_liquid"
+      },
+      {
+        "from": "device",
+        "to": "output_powder"
+      }
+    ]
+  },
+  "water_wheel": {
+    "steps": [
+      {
+        "id": "input",
+        "name": "压力水源",
+        "kind": "input",
+        "duration": 2.0,
+        "pos": [90, 250]
+      },
+      {
+        "id": "device",
+        "name": "龙骨水车",
+        "kind": "device",
+        "duration": 2.0,
+        "pos": [380, 250]
+      },
+      {
+        "id": "output_mech",
+        "name": "机械力",
+        "kind": "output",
+        "duration": 2.0,
+        "pos": [760, 145]
+      },
+      {
+        "id": "output_water",
+        "name": "水",
+        "kind": "output",
+        "duration": 2.0,
+        "pos": [760, 335]
+      }
+    ],
+    "connections": [
+      {
+        "from": "input",
+        "to": "device"
+      },
+      {
+        "from": "device",
+        "to": "output_mech"
+      },
+      {
+        "from": "device",
+        "to": "output_water"
+      }
+    ]
+  },
+  "dam_power": {
+    "steps": [
+      {
+        "id": "input",
+        "name": "修复水坝",
+        "kind": "input",
+        "duration": 0.0,
+        "pos": [90, 250]
+      },
+      {
+        "id": "device",
+        "name": "水坝接口",
+        "kind": "device",
+        "duration": 0.0,
+        "pos": [380, 250]
+      },
+      {
+        "id": "output_power",
+        "name": "电力",
+        "kind": "output",
+        "duration": 0.0,
+        "pos": [760, 145]
+      },
+      {
+        "id": "output_water",
+        "name": "水",
+        "kind": "output",
+        "duration": 0.0,
+        "pos": [760, 335]
+      }
+    ],
+    "connections": [
+      {
+        "from": "input",
+        "to": "device"
+      },
+      {
+        "from": "device",
+        "to": "output_power"
+      },
+      {
+        "from": "device",
+        "to": "output_water"
+      }
+    ]
+  },
+  "sedimentation_tank": {
+    "steps": [
+      {
+        "id": "input",
+        "name": "浊液类",
+        "kind": "input",
+        "duration": 2.0,
+        "pos": [90, 250]
+      },
+      {
+        "id": "device",
+        "name": "沉淀池",
+        "kind": "device",
+        "duration": 2.0,
+        "pos": [380, 250]
+      },
+      {
+        "id": "output_powder",
+        "name": "粉末",
+        "kind": "output",
+        "duration": 2.0,
+        "pos": [760, 145]
+      },
+      {
+        "id": "output_liquid",
+        "name": "液体",
+        "kind": "output",
+        "duration": 2.0,
+        "pos": [760, 335]
+      }
+    ],
+    "connections": [
+      {
+        "from": "input",
+        "to": "device"
+      },
+      {
+        "from": "device",
+        "to": "output_powder"
+      },
+      {
+        "from": "device",
+        "to": "output_liquid"
+      }
+    ]
+  }
+}

@@ -1,0 +1,127 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/recipe_browser/recipe_browser.gd" id="1_browser"]
+[ext_resource type="Script" path="res://scripts/recipe_browser/recipe_database.gd" id="2_db"]
+
+[node name="RecipeBrowser" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("1_browser")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.054902, 0.0784314, 0.129412, 0.98)
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 24
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="HeaderRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TitleBlock" type="VBoxContainer" parent="MarginContainer/VBoxContainer/HeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="MarginContainer/VBoxContainer/HeaderRow/TitleBlock"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.972549, 0.980392, 1, 1)
+theme_override_font_sizes/font_size = 34
+text = "设备配方与流程"
+
+[node name="Subtitle" type="Label" parent="MarginContainer/VBoxContainer/HeaderRow/TitleBlock"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.678431, 0.772549, 0.913725, 1)
+theme_override_font_sizes/font_size = 15
+text = "检索工业设备的输入输出，并查看对应流程图。"
+
+[node name="CloseButton" type="Button" parent="MarginContainer/VBoxContainer/HeaderRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(112, 46)
+layout_mode = 2
+text = "关闭"
+
+[node name="HeaderPanel" type="PanelContainer" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HeaderContent" type="BoxContainer" parent="MarginContainer/VBoxContainer/HeaderPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="SearchContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/HeaderPanel/HeaderContent"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="SearchLabel" type="Label" parent="MarginContainer/VBoxContainer/HeaderPanel/HeaderContent/SearchContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.678431, 0.772549, 0.913725, 1)
+text = "搜索"
+
+[node name="SearchInput" type="LineEdit" parent="MarginContainer/VBoxContainer/HeaderPanel/HeaderContent/SearchContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.972549, 0.980392, 1, 1)
+theme_override_colors/font_placeholder_color = Color(0.541176, 0.627451, 0.764706, 1)
+
+[node name="FilterContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/HeaderPanel/HeaderContent"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(220, 0)
+theme_override_constants/separation = 6
+
+[node name="FilterLabel" type="Label" parent="MarginContainer/VBoxContainer/HeaderPanel/HeaderContent/FilterContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.678431, 0.772549, 0.913725, 1)
+text = "分类"
+
+[node name="CategoryFilter" type="OptionButton" parent="MarginContainer/VBoxContainer/HeaderPanel/HeaderContent/FilterContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Content" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 18
+
+[node name="RecipeDatabase" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("2_db")

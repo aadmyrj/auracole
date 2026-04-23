@@ -2,6 +2,7 @@ extends Node2D
 class_name GameManager
 
 const BUILDING_SCENE: PackedScene = preload("res://scenes/placement_logic/building.tscn")
+const RECIPE_BROWSER_SCENE: PackedScene = preload("res://scenes/recipe_browser/recipe_browser.tscn")
 const DIRECTED_CONVEYOR_PLANNER_V2_SCRIPT: GDScript = preload("res://scripts/placement_logic/directed_conveyor_planner_v2.gd")
 const CONVEYOR_DELETION_MENU_V2_SCRIPT: GDScript = preload("res://scripts/placement_logic/conveyor_deletion_menu_v2.gd")
 const BLUEPRINT_SAVE_PATH: String = "user://blueprints.save"
@@ -28,6 +29,7 @@ enum OperationType {
 @onready var top_actions: HBoxContainer = $CanvasLayer/TopActions
 @onready var undo_button: Button = $CanvasLayer/TopActions/UndoButton
 @onready var clear_button: Button = $CanvasLayer/TopActions/ClearButton
+@onready var recipe_button: Button = $CanvasLayer/TopActions/RecipeButton
 @onready var blueprint_sidebar: BlueprintSidebar = $CanvasLayer/BlueprintSidebar
 @onready var interaction_menu: PopupMenu = $CanvasLayer/InteractionMenu
 
@@ -47,6 +49,7 @@ var _moving_origin_cell: Vector2i = Vector2i.ZERO
 var _skip_left_release_action: bool = false
 var _directed_conveyor_planner: DirectedConveyorPlannerV2 = null
 var _conveyor_deletion_menu: ConveyorDeletionMenuV2 = null
+var _recipe_browser: RecipeBrowser = null
 
 
 func _ready() -> void:
@@ -62,6 +65,7 @@ func _ready() -> void:
 	ui_bar.item_selected.connect(_on_item_selected)
 	undo_button.pressed.connect(_on_undo_pressed)
 	clear_button.pressed.connect(_on_clear_pressed)
+	recipe_button.pressed.connect(_on_recipe_button_pressed)
 	blueprint_sidebar.save_requested.connect(_on_blueprint_save_requested)
 	blueprint_sidebar.load_requested.connect(_on_blueprint_load_requested)
 	blueprint_sidebar.delete_requested.connect(_on_blueprint_delete_requested)
@@ -96,6 +100,17 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _is_recipe_browser_open():
+		if event.is_action_pressed("ui_cancel"):
+			_close_recipe_browser()
+			get_viewport().set_input_as_handled()
+			return
+		if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_R:
+			_close_recipe_browser()
+			get_viewport().set_input_as_handled()
+			return
+		return
+
 	if event is InputEventMouse and _is_pointer_over_ui(event.position):
 		return
 
@@ -103,6 +118,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_R:
+			_open_recipe_browser()
+			get_viewport().set_input_as_handled()
+			return
 		if event.keycode == KEY_Q:
 			_toggle_conveyor_mode()
 			get_viewport().set_input_as_handled()
@@ -245,6 +264,7 @@ func _setup_top_action_buttons() -> void:
 
 	_style_action_button(undo_button, "撤销", Color(0.16, 0.32, 0.58, 0.94), Color(0.55, 0.77, 1.0, 1.0))
 	_style_action_button(clear_button, "清空", Color(0.55, 0.16, 0.16, 0.94), Color(1.0, 0.64, 0.64, 1.0))
+	_style_action_button(recipe_button, "配方", Color(0.15, 0.42, 0.3, 0.94), Color(0.57, 0.94, 0.78, 1.0))
 
 
 func _style_action_button(button: Button, text: String, bg_color: Color, border_color: Color) -> void:
@@ -582,6 +602,8 @@ func _on_viewport_size_changed() -> void:
 
 
 func _is_pointer_over_ui(screen_position: Vector2) -> bool:
+	if _is_recipe_browser_open() and _recipe_browser.get_global_rect().has_point(screen_position):
+		return true
 	if is_instance_valid(ui_bar) and ui_bar.visible and ui_bar.get_global_rect().has_point(screen_position):
 		return true
 	if is_instance_valid(top_actions) and top_actions.visible and top_actions.get_global_rect().has_point(screen_position):
@@ -872,6 +894,13 @@ func _on_clear_pressed() -> void:
 	_clear_current_map(true)
 
 
+func _on_recipe_button_pressed() -> void:
+	if _is_recipe_browser_open():
+		_close_recipe_browser()
+		return
+	_open_recipe_browser()
+
+
 func _push_operation(operation: Dictionary) -> void:
 	_operation_history.append(operation)
 	_update_top_action_buttons()
@@ -902,3 +931,51 @@ func _remove_conveyor_operations(conveyor_id: int) -> void:
 func _update_top_action_buttons() -> void:
 	undo_button.disabled = _operation_history.is_empty()
 	clear_button.disabled = map_manager.get_buildings().is_empty() and map_manager.directed_conveyors.is_empty()
+
+
+func _is_recipe_browser_open() -> bool:
+	return is_instance_valid(_recipe_browser) and _recipe_browser.is_inside_tree()
+
+
+func _open_recipe_browser() -> void:
+	if _is_recipe_browser_open():
+		if not selected_item_id.is_empty():
+			_recipe_browser.set_search_text(selected_item_id)
+		return
+
+	interaction_menu.hide()
+	if _conveyor_deletion_menu != null:
+		_conveyor_deletion_menu.hide()
+	_clear_pressed_building_tracking()
+
+	if is_conveyor_mode:
+		_exit_conveyor_mode()
+	if _moving_building != null:
+		_cancel_move_mode()
+
+	_recipe_browser = RECIPE_BROWSER_SCENE.instantiate() as RecipeBrowser
+	if _recipe_browser == null:
+		push_warning("Failed to create recipe browser.")
+		return
+
+	_recipe_browser.name = "RecipeBrowser"
+	_recipe_browser.close_requested.connect(_on_recipe_browser_close_requested)
+	_recipe_browser.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_recipe_browser.mouse_filter = Control.MOUSE_FILTER_STOP
+	canvas_layer.add_child(_recipe_browser)
+
+	if not selected_item_id.is_empty():
+		_recipe_browser.set_search_text(selected_item_id)
+
+
+func _close_recipe_browser() -> void:
+	if not _is_recipe_browser_open():
+		_recipe_browser = null
+		return
+
+	_recipe_browser.queue_free()
+	_recipe_browser = null
+
+
+func _on_recipe_browser_close_requested() -> void:
+	_close_recipe_browser()

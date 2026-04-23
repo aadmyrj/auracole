@@ -1,0 +1,102 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/recipe_browser/recipe_card.gd" id="1_card"]
+
+[node name="RecipeCard" type="PanelContainer"]
+custom_minimum_size = Vector2(0, 136)
+size_flags_horizontal = 3
+script = ExtResource("1_card")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 18
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Header" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="DeviceName" type="Label" parent="MarginContainer/VBoxContainer/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.972549, 0.980392, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "设备名称"
+
+[node name="Category" type="Label" parent="MarginContainer/VBoxContainer/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.74902, 0.843137, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "分类"
+
+[node name="Content" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="InputContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Content"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="InputTitle" type="Label" parent="MarginContainer/VBoxContainer/Content/InputContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.560784, 0.686275, 0.847059, 1)
+theme_override_font_sizes/font_size = 13
+text = "输入"
+
+[node name="InputContent" type="Label" parent="MarginContainer/VBoxContainer/Content/InputContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.921569, 0.937255, 0.972549, 1)
+text = "输入内容"
+
+[node name="OutputContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Content"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="OutputTitle" type="Label" parent="MarginContainer/VBoxContainer/Content/OutputContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.560784, 0.686275, 0.847059, 1)
+theme_override_font_sizes/font_size = 13
+text = "输出"
+
+[node name="OutputContent" type="Label" parent="MarginContainer/VBoxContainer/Content/OutputContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.921569, 0.937255, 0.972549, 1)
+text = "输出内容"
+
+[node name="NotesContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="NotesTitle" type="Label" parent="MarginContainer/VBoxContainer/Content/NotesContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.560784, 0.686275, 0.847059, 1)
+theme_override_font_sizes/font_size = 13
+text = "备注"
+
+[node name="NotesContent" type="Label" parent="MarginContainer/VBoxContainer/Content/NotesContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.921569, 0.937255, 0.972549, 1)
+text = "备注内容"
+
+[node name="HintLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 2
+theme_override_colors/font_color = Color(0.541176, 0.627451, 0.764706, 1)
+theme_override_font_sizes/font_size = 12
+text = "点击查看流程图"

@@ -86,3 +86,6 @@ layout_mode = 2
 
 [node name="ClearButton" type="Button" parent="CanvasLayer/TopActions" unique_id=1767195467]
 layout_mode = 2
+
+[node name="RecipeButton" type="Button" parent="CanvasLayer/TopActions" unique_id=402247151]
+layout_mode = 2
